@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NaijaSurveyor Pro - Interactive Field Simulator</title>
+  <style>
+    :root {
+      --navy-bg: #070d18;
+      --navy-card: #0a1528;
+      --navy-elevated: #131f37;
+      --navy-stroke: #1e293b;
+      --crimson: #dc2626;
+      --crimson-light: #ef4444;
+      --text-white: #ffffff;
+      --text-slate: #94a3b8;
+      --text-muted: #64748b;
+      --emerald: #10b981;
+      --amber: #f59e0b;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--navy-bg);
+      color: var(--text-white);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      padding: 20px;
+      line-height: 1.5;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--navy-stroke);
+      margin-bottom: 24px;
+    }
+
+    .brand-title {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: var(--text-white);
+    }
+    .brand-subtitle {
+      font-size: 12px;
+      color: var(--text-slate);
+    }
+    .badge-rtk {
+      display: inline-flex;
+      align-items: center;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid var(--emerald);
+      color: var(--emerald);
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    .badge-rtk::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      background: var(--emerald);
+      border-radius: 50%;
+      margin-right: 8px;
+      box-shadow: 0 0 8px var(--emerald);
+    }
+
+    .grid-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 900px) {
+      .grid-container { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--navy-card);
+      border: 1px solid var(--navy-stroke);
+      border-radius: 10px;
+      padding: 20px;
+    }
+
+    .card-title {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: var(--crimson-light);
+      margin-bottom: 14px;
+      text-transform: uppercase;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .coord-value {
+      font-family: monospace;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-white);
+    }
+
+    .coord-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(30, 41, 59, 0.6);
+    }
+    .coord-row:last-child { border-bottom: none; }
+    .coord-label { color: var(--text-slate); font-size: 13px; }
+
+    /* Canvas Bullseye */
+    .radar-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    #stakeoutCanvas {
+      background: #050a14;
+      border-radius: 50%;
+      border: 2px solid var(--navy-stroke);
+      cursor: crosshair;
+    }
+
+    .distance-readout {
+      text-align: center;
+      margin-top: 16px;
+    }
+    .distance-big {
+      font-family: monospace;
+      font-size: 32px;
+      font-weight: 900;
+      color: var(--text-white);
+    }
+    .direction-hint {
+      color: var(--crimson-light);
+      font-size: 14px;
+      font-weight: 700;
+      margin-top: 4px;
+    }
+
+    /* Buttons */
+    .btn {
+      background: var(--crimson);
+      color: var(--text-white);
+      border: none;
+      padding: 12px 18px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s ease;
+      width: 100%;
+      margin-top: 10px;
+    }
+    .btn:hover { background: #b91c1c; }
+
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--navy-stroke);
+      color: var(--text-white);
+    }
+    .btn-outline:hover { background: var(--navy-elevated); }
+
+    .btn-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    /* Tabs */
+    .zone-buttons {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .zone-btn {
+      flex: 1;
+      padding: 8px;
+      background: var(--navy-elevated);
+      border: 1px solid var(--navy-stroke);
+      color: var(--text-slate);
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .zone-btn.active {
+      background: var(--crimson);
+      color: var(--text-white);
+      border-color: var(--crimson);
+    }
+
+    /* Points Table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 12px;
+    }
+    th, td {
+      padding: 8px 10px;
+      text-align: left;
+      border-bottom: 1px solid var(--navy-stroke);
+      font-family: monospace;
+    }
+    th { color: var(--text-slate); font-weight: 600; text-transform: uppercase; }
+
+    .nmea-log {
+      background: #040810;
+      border: 1px solid var(--navy-stroke);
+      padding: 10px;
+      font-family: monospace;
+      font-size: 11px;
+      color: #38bdf8;
+      height: 90px;
+      overflow-y: auto;
+      border-radius: 6px;
+      margin-top: 12px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div>
+      <div class="brand-title">NAIJASURVEYOR PRO (MVP)</div>
+      <div class="brand-subtitle">Interactive Geodetic & Cadastral Field Simulator | Pathways Mapping</div>
+    </div>
+    <div class="badge-rtk" id="rtkBadge">RTK FIXED (0.008m)</div>
+  </header>
+
+  <div class="grid-container">
+
+    <!-- Card 1: RTK Receiver Live Stream -->
+    <div class="card">
+      <div class="card-title">
+        <span>LIVE RTK GNSS ROVER (MINNA DATUM 1965)</span>
+        <span id="activeZoneLabel" style="color: var(--text-white)">ZONE 32N (ABUJA)</span>
+      </div>
+
+      <div class="zone-buttons">
+        <button class="zone-btn" onclick="switchPreset(31, 'LAGOS')">ZONE 31N (LAGOS)</button>
+        <button class="zone-btn active" id="btnZone32" onclick="switchPreset(32, 'ABUJA')">ZONE 32N (ABUJA)</button>
+        <button class="zone-btn" onclick="switchPreset(33, 'MAIDUGURI')">ZONE 33N (MAIDUGURI)</button>
+      </div>
+
+      <div class="coord-row">
+        <span class="coord-label">EASTING (X GRID)</span>
+        <span class="coord-value" id="dispEasting">324075.870 m</span>
+      </div>
+      <div class="coord-row">
+        <span class="coord-label">NORTHING (Y GRID)</span>
+        <span class="coord-value" id="dispNorthing">1003578.147 m</span>
+      </div>
+      <div class="coord-row">
+        <span class="coord-label">ORTHOMETRIC ELEVATION (Z)</span>
+        <span class="coord-value" id="dispHeight">485.200 m</span>
+      </div>
+      <div class="coord-row">
+        <span class="coord-label">WGS84 GPS (LAT / LON)</span>
+        <span class="coord-value" style="font-size: 14px;" id="dispWgs">9.076500° N, 7.398600° E</span>
+      </div>
+      <div class="coord-row">
+        <span class="coord-label">SATELLITES / HDOP / AGE</span>
+        <span class="coord-value" style="font-size: 14px; color: var(--emerald)">22 SATS | HDOP 0.7 | 1.2s</span>
+      </div>
+
+      <button class="btn" onclick="recordCurrentPoint()">RECORD BEACON AT CURRENT RTK FIX</button>
+
+      <div class="nmea-log" id="nmeaLogBox">$GNGGA,112500.00,0904.59000,N,00723.91600,E,4,22,0.7,485.20,M,-28.4,M,1.2,0042*4D</div>
+    </div>
+
+    <!-- Card 2: Interactive Pillar Tracing Stakeout Compass -->
+    <div class="card">
+      <div class="card-title">
+        <span>PILLAR TRACING & STAKEOUT COMPASS</span>
+        <span style="color: var(--text-slate)">TARGET: BEACON P1</span>
+      </div>
+
+      <div class="radar-container">
+        <canvas id="stakeoutCanvas" width="260" height="260"></canvas>
+        <div class="distance-readout">
+          <div class="distance-big" id="stakeDistance">2.145 m</div>
+          <div class="direction-hint" id="stakeInstructions">GO NORTH 1.820 m | GO EAST 1.130 m</div>
+        </div>
+      </div>
+      <p style="font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 10px;">
+        Interactive: Click or drag anywhere inside the radar to move the simulated rover.
+      </p>
+
+      <button class="btn btn-outline" style="border-color: var(--emerald); color: var(--emerald);" onclick="snapToTarget()">
+        SNAP ROVER DIRECTLY TO TARGET (2CM CADASTRE LOCK)
+      </button>
+    </div>
+
+    <!-- Card 3: Boundary Points Register & Export -->
+    <div class="card" style="grid-column: span 2;">
+      <div class="card-title">
+        <span>CADASTRAL BEACON REGISTER (JOB: SURV/2026/089)</span>
+        <span style="color: var(--text-slate)" id="pointsCountLabel">4 BEACONS LOGGED</span>
+      </div>
+
+      <table id="pointsTable">
+        <thead>
+          <tr>
+            <th>BEACON ID</th>
+            <th>EASTING (m)</th>
+            <th>NORTHING (m)</th>
+            <th>HEIGHT (m)</th>
+            <th>CLASSIFICATION</th>
+            <th>STATUS</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>P1</td>
+            <td>324075.870</td>
+            <td>1003578.147</td>
+            <td>485.200</td>
+            <td>OFFICIAL_BEACON</td>
+            <td style="color: var(--emerald)">VERIFIED</td>
+          </tr>
+          <tr>
+            <td>P2</td>
+            <td>324125.450</td>
+            <td>1003612.300</td>
+            <td>485.650</td>
+            <td>OFFICIAL_BEACON</td>
+            <td style="color: var(--emerald)">VERIFIED</td>
+          </tr>
+          <tr>
+            <td>P3</td>
+            <td>324110.120</td>
+            <td>1003540.800</td>
+            <td>484.900</td>
+            <td>OFFICIAL_BEACON</td>
+            <td style="color: var(--emerald)">VERIFIED</td>
+          </tr>
+          <tr>
+            <td>P4</td>
+            <td>324050.600</td>
+            <td>1003530.250</td>
+            <td>484.750</td>
+            <td>OFFICIAL_BEACON</td>
+            <td style="color: var(--emerald)">VERIFIED</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="btn-group">
+        <button class="btn btn-outline" onclick="downloadNisCsv()">DOWNLOAD NIS STANDARD CSV</button>
+        <button class="btn btn-outline" onclick="downloadCadDxf()">DOWNLOAD AUTOCAD R12 DXF</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // State
+    let currentZone = 32;
+    let targetE = 324075.870;
+    let targetN = 1003578.147;
+    let roverE = 324077.000;
+    let roverN = 1003576.327;
+    let roverH = 485.200;
+
+    const canvas = document.getElementById('stakeoutCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function switchPreset(zone, city) {
+      currentZone = zone;
+      document.querySelectorAll('.zone-btn').forEach(b => b.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById('activeZoneLabel').innerText = `ZONE ${zone}N (${city})`;
+
+      if (zone === 31) { // Lagos
+        roverE = 542012.491; roverN = 721069.661;
+        targetE = roverE + 1.2; targetN = roverN + 1.8;
+      } else if (zone === 32) { // Abuja
+        roverE = 324075.870; roverN = 1003578.147;
+        targetE = roverE + 0.8; targetN = roverN - 1.4;
+      } else { // Maiduguri
+        roverE = 298521.104; roverN = 1308667.425;
+        targetE = roverE - 1.5; targetN = roverN + 2.0;
+      }
+      updateUI();
+      drawRadar();
+    }
+
+    function snapToTarget() {
+      roverE = targetE + 0.008; // 8 millimeters residual
+      roverN = targetN + 0.005;
+      updateUI();
+      drawRadar();
+    }
+
+    function updateUI() {
+      document.getElementById('dispEasting').innerText = roverE.toFixed(3) + ' m';
+      document.getElementById('dispNorthing').innerText = roverN.toFixed(3) + ' m';
+      document.getElementById('dispHeight').innerText = roverH.toFixed(3) + ' m';
+
+      const dE = targetE - roverE;
+      const dN = targetN - roverN;
+      const dist = Math.sqrt(dE*dE + dN*dN);
+
+      document.getElementById('stakeDistance').innerText = dist.toFixed(3) + ' m';
+
+      if (dist <= 0.02) {
+        document.getElementById('stakeInstructions').innerText = 'ON TARGET (WITHIN 2CM CADASTRE TOLERANCE)';
+        document.getElementById('stakeInstructions').style.color = '#10b981';
+      } else {
+        const nDir = dN >= 0 ? `GO NORTH ${Math.abs(dN).toFixed(3)}m` : `GO SOUTH ${Math.abs(dN).toFixed(3)}m`;
+        const eDir = dE >= 0 ? `GO EAST ${Math.abs(dE).toFixed(3)}m` : `GO WEST ${Math.abs(dE).toFixed(3)}m`;
+        document.getElementById('stakeInstructions').innerText = `${nDir} | ${eDir}`;
+        document.getElementById('stakeInstructions').style.color = '#ef4444';
+      }
+    }
+
+    function drawRadar() {
+      const w = canvas.width;
+      const h = canvas.height;
+      const cx = w / 2;
+      const cy = h / 2;
+      const radius = w / 2 - 10;
+
+      ctx.clearRect(0, 0, w, h);
+
+      // Axes
+      ctx.strokeStyle = 'rgba(30, 41, 59, 0.8)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(cx, 10); ctx.lineTo(cx, h - 10);
+      ctx.moveTo(10, cy); ctx.lineTo(w - 10, cy);
+      ctx.stroke();
+
+      // Range Rings
+      const dE = targetE - roverE;
+      const dN = targetN - roverN;
+      const dist = Math.sqrt(dE*dE + dN*dN);
+      const isLocked = dist <= 0.02;
+
+      ctx.strokeStyle = isLocked ? '#10b981' : '#dc2626';
+      ctx.lineWidth = isLocked ? 2.5 : 1.2;
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius * 0.15, 0, Math.PI * 2); // 2cm tolerance zone
+      ctx.stroke();
+
+      ctx.strokeStyle = 'rgba(30, 41, 59, 0.7)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius * 0.45, 0, Math.PI * 2);
+      ctx.arc(cx, cy, radius * 0.80, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Target Monument (Center)
+      ctx.fillStyle = isLocked ? '#10b981' : '#ef4444';
+      ctx.beginPath();
+      ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Rover position
+      const scaleDist = dist < 2.0 ? 2.0 : (dist < 10.0 ? 10.0 : dist);
+      const ppm = (radius * 0.8) / scaleDist;
+
+      // Rover is at (-dE, +dN) in screen space
+      const rx = Math.max(15, Math.min(w - 15, cx - dE * ppm));
+      const ry = Math.max(15, Math.min(h - 15, cy + dN * ppm));
+
+      // Vector line
+      ctx.strokeStyle = '#dc2626';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(rx, ry);
+      ctx.lineTo(cx, cy);
+      ctx.stroke();
+
+      // Rover cursor
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(rx, ry, 6, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = '#dc2626';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(rx, ry, 9, 0, Math.PI * 2);
+      ctx.stroke();
+
+      if (isLocked) {
+        ctx.fillStyle = 'rgba(16, 185, 129, 0.2)';
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius * 0.15, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // Canvas click / drag interaction
+    canvas.addEventListener('mousedown', moveRoverFromCanvas);
+    canvas.addEventListener('mousemove', e => { if (e.buttons === 1) moveRoverFromCanvas(e); });
+
+    function moveRoverFromCanvas(e) {
+      const rect = canvas.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const clickY = e.clientY - rect.top;
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+
+      // Offset from center
+      const offsetX = clickX - cx;
+      const offsetY = clickY - cy;
+
+      roverE = targetE - (offsetX * 0.03);
+      roverN = targetN + (offsetY * 0.03);
+
+      updateUI();
+      drawRadar();
+    }
+
+    let pointSeq = 5;
+    function recordCurrentPoint() {
+      const name = 'P' + pointSeq++;
+      const table = document.getElementById('pointsTable').getElementsByTagName('tbody')[0];
+      const row = table.insertRow();
+      row.innerHTML = `<td>${name}</td><td>${roverE.toFixed(3)}</td><td>${roverN.toFixed(3)}</td><td>${roverH.toFixed(3)}</td><td>RTK_SURVEY_BEACON</td><td style="color: #10b981">RECORDED</td>`;
+      document.getElementById('pointsCountLabel').innerText = `${pointSeq - 1} BEACONS LOGGED`;
+      alert(`Beacon ${name} recorded into active job at current RTK precision!`);
+    }
+
+    function downloadNisCsv() {
+      const csv = `# NAIJASURVEYOR PRO - CADASTRAL POINT EXPORT\n# Job Number: SURV/2026/089 | Zone: ${currentZone}N\nPOINT_ID,EASTING,NORTHING,HEIGHT,TYPE,STATUS\nP1,324075.870,1003578.147,485.200,BEACON,VERIFIED\nP2,324125.450,1003612.300,485.650,BEACON,VERIFIED\nP3,324110.120,1003540.800,484.900,BEACON,VERIFIED\nP4,324050.600,1003530.250,484.750,BEACON,VERIFIED\n`;
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'NaijaSurveyor_SURV_2026_089_NIS.csv';
+      a.click();
+    }
+
+    function downloadCadDxf() {
+      const dxf = `0\nSECTION\n2\nENTITIES\n0\nPOINT\n8\nBEACONS\n10\n324075.870\n20\n1003578.147\n30\n485.200\n0\nTEXT\n8\nBEACON_LABELS\n10\n324076.620\n20\n1003578.897\n30\n485.200\n40\n1.2\n1\nP1\n0\nENDSEC\n0\nEOF\n`;
+      const blob = new Blob([dxf], { type: 'application/dxf' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'NaijaSurveyor_SURV_2026_089.dxf';
+      a.click();
+    }
+
+    updateUI();
+    drawRadar();
+  </script>
+</body>
+</html>
